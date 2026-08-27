@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TCS Cyber Defense — Phishing Threat Operations</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+  <!-- App Header & Navigation -->
+  <header class="app-header">
+    <div class="header-brand">
+      <div class="brand-icon">🛡️</div>
+      <div>
+        <h1>TCS Cyber Defense Center</h1>
+        <div class="org-tag">Tata Consultancy Services &bull; Enterprise SOC Portal</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="live-indicator">
+        <span class="pulse-dot"></span>
+        <span id="sync-status">Live Monitoring</span>
+      </div>
+      <button class="btn btn-secondary" id="auto-refresh-btn" title="Toggle Auto Refresh (10s)">
+        ⏱️ Auto-Sync: Off
+      </button>
+      <button class="btn" id="poll-btn">
+        ⚡ Poll Mailpit Now
+      </button>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- KPI / Metrics Overview Cards -->
+    <div class="metrics-grid">
+      <div class="metric-card accent-brand">
+        <div class="metric-title">Scanned Emails</div>
+        <div class="metric-value">
+          <span>{{ stats.total_emails if stats else 0 }}</span>
+          <span style="font-size:16px;">📧</span>
+        </div>
+        <div class="metric-subtitle">Total processed in threat queue</div>
+      </div>
+
+      <div class="metric-card accent-critical">
+        <div class="metric-title">Phishing Blocked</div>
+        <div class="metric-value">
+          <span style="color:var(--critical-solid);">{{ stats.phishing_count if stats else 0 }}</span>
+          <span style="font-size:16px;">🚫</span>
+        </div>
+        <div class="metric-subtitle">High & Critical threat vectors</div>
+      </div>
+
+      <div class="metric-card accent-suspicious">
+        <div class="metric-title">Suspicious Flagged</div>
+        <div class="metric-value">
+          <span style="color:var(--suspicious-solid);">{{ stats.suspicious_count if stats else 0 }}</span>
+          <span style="font-size:16px;">⚠️</span>
+        </div>
+        <div class="metric-subtitle">Under SOC investigation</div>
+      </div>
+
+      <div class="metric-card accent-legitimate">
+        <div class="metric-title">Security Posture</div>
+        <div class="metric-value">
+          <span style="color:var(--legitimate-solid);">{{ stats.posture_score if stats else '100' }}%</span>
+          <span style="font-size:16px;">🛡️</span>
+        </div>
+        <div class="metric-subtitle">Organization Defense Index</div>
+      </div>
+
+      <div class="metric-card accent-phishing">
+        <div class="metric-title">Restricted Users</div>
+        <div class="metric-value">
+          <span>{{ stats.restricted_users if stats else 0 }} / {{ stats.total_users if stats else 0 }}</span>
+          <span style="font-size:16px;">🔒</span>
+        </div>
+        <div class="metric-subtitle">Accounts under containment</div>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="main-grid">
+
+      <!-- Left Column: Email Threat Queue -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">
+              📥 Email Threat Inspection Log
+            </h2>
+            <div class="filter-controls">
+              <input type="text" id="search-input" class="search-input" placeholder="Search sender, subject...">
+              <div class="filter-tabs">
+                <button class="tab-btn active" data-filter="ALL">All</button>
+                <button class="tab-btn" data-filter="PHISHING">Phishing</button>
+                <button class="tab-btn" data-filter="SUSPICIOUS">Suspicious</button>
+                <button class="tab-btn" data-filter="LEGITIMATE">Legitimate</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table id="email-table">
+              <thead>
+                <tr>
+                  <th>Processing ID</th>
+                  <th>Sender</th>
+                  <th>Subject</th>
+                  <th>Recipient</th>
+                  <th>Classification</th>
+                  <th>Risk Score</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for e in emails %}
+                <tr data-classification="{{ e.classification }}" data-search="{{ e.sender }} {{ e.subject }} {{ e.recipient }} {{ e.processing_id }}">
+                  <td><code style="font-size:11px; background:var(--bg-surface-subtle); padding:2px 6px; border-radius:4px;">{{ e.processing_id }}</code></td>
+                  <td style="font-weight:500;">{{ e.sender }}</td>
+                  <td>{{ e.subject }}</td>
+                  <td class="small-muted">{{ e.recipient }}</td>
+                  <td>
+                    <span class="badge badge-{{ e.classification.replace(' ', '-') }}">
+                      {{ e.classification }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="risk-meter">
+                      <span style="font-weight:700; width:22px; text-align:right;">{{ e.risk_score }}</span>
+                      <div class="risk-bar-bg">
+                        <div class="risk-bar-fill" style="width: {{ e.risk_score }}%; background: {% if e.risk_score >= 70 %}var(--critical-solid){% elif e.risk_score >= 30 %}var(--suspicious-solid){% else %}var(--legitimate-solid){% endif %};"></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <a class="btn btn-secondary btn-xs" href="{{ url_for('alert', email_id=e.id) }}">Inspect Alert</a>
+                  </td>
+                </tr>
+                {% else %}
+                <tr id="no-emails-row">
+                  <td colspan="7" class="small-muted" style="text-align:center; padding: 24px;">
+                    No emails in queue. Trigger emails via Mailpit or simulator, then click <strong>"Poll Mailpit Now"</strong>.
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Threat Intel & Users Roster -->
+      <div>
+
+        <!-- Organization User Roster -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">👥 User Security Roster</h2>
+            <span class="small-muted">{{ users|length }} Accounts</span>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>User Email</th>
+                  <th>Status</th>
+                  <th>Risk Tier</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for u in users %}
+                <tr>
+                  <td style="font-size:12.5px; font-weight:500;">{{ u.email }}</td>
+                  <td>
+                    <span class="badge badge-{{ u.status }}" id="status-badge-{{ loop.index }}">{{ u.status }}</span>
+                  </td>
+                  <td>
+                    <span class="badge-{{ u.risk_level }}">{{ u.risk_level }}</span>
+                  </td>
+                  <td>
+                    <button class="btn btn-secondary btn-xs toggle-user-btn" data-user-email="{{ u.email }}">
+                      {% if u.status == 'ACTIVE' %}Restrict{% else %}Unrestrict{% endif %}
+                    </button>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- IOC / Domain Lookup Table -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">🌐 IOC & Domain Intel Registry</h2>
+            <span class="small-muted">{{ domains|length }} Domain Records</span>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Domain</th>
+                  <th>Classification</th>
+                  <th>Source</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for d in domains %}
+                <tr>
+                  <td><strong style="font-size:12.5px;">{{ d.domain }}</strong></td>
+                  <td>
+                    <span class="badge badge-{{ d.classification }}">
+                      {{ d.classification }}
+                    </span>
+                  </td>
+                  <td class="small-muted">{{ d.source }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

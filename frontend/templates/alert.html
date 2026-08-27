@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Security Incident Detail — Phishing Threat Detector</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="alert-wrapper">
+    <div class="alert-popup">
+      <div class="alert-header banner-{{ email.classification.replace(' ', '-') }}">
+        <span style="font-size:20px;">
+          {% if email.classification in ('PHISHING', 'CRITICAL PHISHING') %}🚫{% elif email.classification == 'SUSPICIOUS' %}⚠️{% else %}🛡️{% endif %}
+        </span>
+        <div>
+          {% if email.classification in ('PHISHING', 'CRITICAL PHISHING') %}
+            PHISHING THREAT DETECTED &amp; ISOLATED
+          {% elif email.classification == 'SUSPICIOUS' %}
+            SUSPICIOUS THREAT INDICATOR DETECTED
+          {% else %}
+            EMAIL SCANNED — NO KNOWN THREAT FOUND
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="alert-body">
+        <div class="detail-row">
+          <span class="detail-label">Threat Severity</span>
+          <span class="badge badge-{{ email.classification.replace(' ', '-') }}">{{ email.classification }}</span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">Risk Assessment Score</span>
+          <div class="risk-meter">
+            <span class="detail-val">{{ email.risk_score }} / 100</span>
+            <div class="risk-bar-bg" style="width:100px; height:8px;">
+              <div class="risk-bar-fill" style="width: {{ email.risk_score }}%; background: {% if email.risk_score >= 70 %}var(--critical-solid){% elif email.risk_score >= 30 %}var(--suspicious-solid){% else %}var(--legitimate-solid){% endif %};"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">Sender Address</span>
+          <span class="detail-val">{{ email.sender }}</span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">Recipient</span>
+          <span class="detail-val">{{ email.recipient }}</span>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">Subject Line</span>
+          <span class="detail-val">{{ email.subject }}</span>
+        </div>
+
+        <div style="margin-top: 18px;">
+          <strong style="font-size: 13px; color: var(--text-main);">Threat Detection Signals</strong>
+          <ul class="signals-list">
+            {% for s in email.signals %}
+            <li>{{ s.replace('_', ' ').replace(':', ' — ') }}</li>
+            {% else %}
+            <li class="small-muted" style="border-left:none;">No high-risk threat indicators recorded.</li>
+            {% endfor %}
+          </ul>
+        </div>
+
+        <div style="margin-top: 14px;">
+          <strong style="font-size: 13px; color: var(--text-main);">Automated SOC Analysis</strong>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; background: var(--bg-surface-subtle); padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
+            {{ email.explanation or "No explanation available." }}
+          </p>
+        </div>
+
+        {% if incident and incident.affected_users %}
+        <div style="margin-top: 14px;">
+          <strong style="font-size: 13px; color: var(--text-main);">Potentially Impacted Corporate Users</strong>
+          <div style="margin-top: 4px; display:flex; gap:6px; flex-wrap:wrap;">
+            {% for u in incident.affected_users %}
+            <span class="badge badge-RESTRICTED">{{ u }}</span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="alert-actions">
+          <button class="btn btn-danger" data-report-id="{{ email.id }}" style="flex:1;">
+            🚨 Confirm &amp; Report Phishing
+          </button>
+          <button class="btn btn-secondary" data-delete-id="{{ email.id }}">
+            🗑️ Delete Threat
+          </button>
+          <a class="btn btn-secondary" href="{{ url_for('dashboard') }}">
+            &larr; Back to Dashboard
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

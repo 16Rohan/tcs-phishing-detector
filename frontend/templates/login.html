@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TCS Identity Gateway — Enterprise Login</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="logo">🔐</div>
+        <h2>Enterprise Identity Service</h2>
+        <p>Simulated Single Sign-On Gateway</p>
+      </div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label for="email">Corporate Email Address</label>
+          <input type="email" id="email" class="form-control" placeholder="krishnaveni@company.test" required autofocus>
+        </div>
+        <button class="btn" type="submit" style="width:100%; padding:10px;">
+          Sign In with Corporate SSO
+        </button>
+        <div id="login-result" class="login-result"></div>
+      </form>
+
+      <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border-light); text-align:center;">
+        <span class="small-muted">TCS Phishing Threat & Containment System Demo</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("email").value;
+      const btn = e.target.querySelector("button");
+      btn.disabled = true;
+      btn.textContent = "Authenticating...";
+      
+      const el = document.getElementById("login-result");
+      el.className = "login-result";
+      
+      try {
+        const resp = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const data = await resp.json();
+        
+        if (resp.ok) {
+          el.textContent = `✓ Signed in successfully as ${data.email} (Device ID: ${data.device_id})`;
+          el.classList.add("success");
+        } else {
+          el.textContent = `⚠️ ${data.reason || "Login failed."}`;
+          el.classList.add("error");
+        }
+      } catch (err) {
+        el.textContent = "⚠️ Network error connecting to identity service.";
+        el.classList.add("error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Sign In with Corporate SSO";
+      }
+    });
+  </script>
+</body>
+</html>

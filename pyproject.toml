@@ -1,7 +1,19 @@
 [project]
 name = "tcs-phishing-detector"
 version = "0.1.0"
-description = "Add your description here"
+description = "Local-first phishing email detection, social-engineering analysis and automated response prototype"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "flask>=3.0.0",
+    "requests>=2.31.0",
+    "beautifulsoup4>=4.12.0",
+    "python-dotenv>=1.0.0",
+    "tldextract>=5.1.0",
+]
+
+# Phish_Byte (https://github.com/AnonymousSingh-007/Phish_Byte) is not published on
+# PyPI. To enable the pretrained ML engine, clone it and follow its own install
+# instructions (venv + `pip install -r requirements.txt`) inside this project's
+# environment. If it is not installed, app/detection/content_analyzer.py
+# transparently falls back to a deterministic heuristic scorer.
